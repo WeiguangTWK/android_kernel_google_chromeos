@@ -45,6 +45,8 @@ static int virtio_send_pmem_request(struct nd_region *nd_region,
 	unsigned long flags;
 	int err, err1;
 
+	guard(mutex)(&vpmem->flush_lock);
+
 	/*
 	 * Don't bother to submit the request to the device if the device is
 	 * not activated.
@@ -53,6 +55,10 @@ static int virtio_send_pmem_request(struct nd_region *nd_region,
 		dev_info(&vdev->dev, "virtio pmem device needs a reset\n");
 		return -EIO;
 	}
+
+	req_data = kmalloc(sizeof(*req_data), GFP_KERNEL);
+	if (!req_data)
+		return -ENOMEM;
 
 	req_data->done = false;
 	init_waitqueue_head(&req_data->host_acked);

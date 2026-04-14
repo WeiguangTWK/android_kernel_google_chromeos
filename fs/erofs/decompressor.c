@@ -116,9 +116,9 @@ static int z_erofs_lz4_prepare_dstpages(struct z_erofs_decompress_req *rq,
 	return kaddr ? 1 : 0;
 }
 
-static void *z_erofs_lz4_handle_inplace_io(struct z_erofs_decompress_req *rq,
-			void *inpage, void *out, unsigned int *inputmargin, int *maptype,
-			bool support_0padding)
+static void *z_erofs_handle_inplace_io(struct z_erofs_decompress_req *rq,
+		void *inpage, void *out, unsigned int *inputmargin, int *maptype,
+		bool support_0padding)
 {
 	unsigned int nrpages_in, nrpages_out;
 	unsigned int ofull, oend, inputsize, total, i;
@@ -186,8 +186,7 @@ docopy:
 	return src;
 }
 
-static int z_erofs_lz4_decompress_mem(struct z_erofs_decompress_req *rq,
-				      u8 *dst)
+static int z_erofs_lz4_decompress(struct z_erofs_decompress_req *rq, u8 *dst)
 {
 	unsigned int inputmargin;
 	u8 *out, *headpage, *src;
@@ -214,8 +213,8 @@ static int z_erofs_lz4_decompress_mem(struct z_erofs_decompress_req *rq,
 	}
 
 	rq->inputsize -= inputmargin;
-	src = z_erofs_lz4_handle_inplace_io(rq, headpage, dst, &inputmargin,
-					    &maptype, support_0padding);
+	src = z_erofs_handle_inplace_io(rq, headpage, dst, &inputmargin,
+					&maptype, support_0padding);
 	if (IS_ERR(src))
 		return PTR_ERR(src);
 
@@ -290,8 +289,7 @@ static int z_erofs_lz4_decompress(struct z_erofs_decompress_req *rq,
 	dst_maptype = 2;
 
 dstmap_out:
-	ret = z_erofs_lz4_decompress_mem(rq, dst);
-
+	ret = alg->decompress(rq, dst);
 	if (!dst_maptype)
 		kunmap_atomic(dst);
 	else if (dst_maptype == 2)
